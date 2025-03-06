@@ -1,8 +1,23 @@
-import { Message } from '../schema';
+import { Message } from '../schema/types';
+import { MessageStoreType, GroupsType, Resolvers } from './types';
 
-export const resolvers = {
+const messageStore: MessageStoreType = {
+  users: {},
+};
+
+const groups: GroupsType = {
+  groupA: ['bob', 'pratima', 'darrell', 'leslie'],
+  groupB: ['hannah', 'dillon', 'courtney', 'jose'],
+};
+
+export const resolvers: Resolvers = {
   Query: {
-    dummy: () => 'Hello World',
+    getUserMessages: (_parent: unknown, { userId }: { userId: string }) => {
+      return messageStore.users[userId] || [];
+    },
+    getGroupMembers: (_parent: unknown, { groupId }: { groupId: string }) => {
+      return groups[groupId] || [];
+    },
   },
   Subscription: {
     userMessages: {
@@ -70,9 +85,17 @@ export const resolvers = {
       const message: Message = { to, from, text };
       console.log(message, 'message here');
 
+      if (!messageStore.users[to]) {
+        messageStore.users[to] = [];
+      }
+
+      messageStore.users[to].push(message);
+
       const channel = new BroadcastChannel(`user:${to}`);
+
       channel.postMessage(message);
       channel.close();
+
       return true;
     },
     sendGroupMessage: (
@@ -81,9 +104,30 @@ export const resolvers = {
     ) => {
       const message: Message = { to: toGroup, from, text };
 
+      if (!groups[toGroup]) {
+        console.error(`Group ${toGroup} does not exist`);
+        return false;
+      }
+
+      const groupUsers = groups[toGroup];
+
+      groupUsers.forEach((userId) => {
+        if (!messageStore.users[userId]) {
+          messageStore.users[userId] = [];
+        }
+
+        messageStore.users[userId].push({
+          to: userId,
+          from,
+          text,
+        });
+      });
+
       const channel = new BroadcastChannel(`group:${toGroup}`);
+
       channel.postMessage(message);
       channel.close();
+
       return true;
     },
   },

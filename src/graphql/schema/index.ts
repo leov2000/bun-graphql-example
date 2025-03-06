@@ -1,13 +1,8 @@
 import { makeExecutableSchema } from '@graphql-tools/schema';
 import { createYoga, YogaServerInstance } from 'graphql-yoga';
-import { GraphQLSchema } from 'graphql';
+import { GraphQLSchema} from 'graphql';
+import { IResolvers } from '@graphql-tools/utils';
 import { resolvers } from '../resolvers';
-
-export type Message = {
-  to: string;
-  from: string;
-  text: string;
-};
 
 export const typeDefs: string = `
   type Message {
@@ -29,11 +24,12 @@ export const typeDefs: string = `
   }
 
   type Query {
-    dummy: String!
+    getUserMessages(userId: String!): [Message]!
+    getGroupMembers(groupId: String!): [String]!
   }
 `;
 
-export const schema: GraphQLSchema = makeExecutableSchema({ typeDefs, resolvers });
+export const schema: GraphQLSchema = makeExecutableSchema({ typeDefs, resolvers: (resolvers as unknown as IResolvers<any, any>) });
 export const yoga: YogaServerInstance<{}, {}> = createYoga({
   schema,
   graphiql: false,
